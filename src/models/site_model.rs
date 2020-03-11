@@ -6,8 +6,8 @@ pub struct SiteModel {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
 
-    #[serde(rename = "owners")]
-    pub owners: Vec<String>,
+    #[serde(rename = "owners", skip_serializing_if = "Option::is_none")]
+    pub owners: Option<Vec<String>>,
 
     #[serde(rename = "domain", skip_serializing_if = "Option::is_none")]
     pub domain: Option<String>,

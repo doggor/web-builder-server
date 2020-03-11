@@ -1,4 +1,4 @@
-use super::requests::{SiteCreationRequest, SiteUpdateRequest};
+use super::requests::{SiteCreationRequest, SiteListRequest, SiteUpdateRequest};
 use crate::models::SiteModel;
 use crate::services::ISiteService;
 use crate::utils::http_result::ok;
@@ -7,8 +7,11 @@ use std::sync::Arc;
 
 type SiteService = web::Data<Arc<dyn ISiteService>>;
 
-pub async fn list_sites(site_service: SiteService) -> impl Responder {
-    let sites = (&site_service).list_sites().await?;
+pub async fn list_sites(
+    site_service: SiteService,
+    query: web::Query<SiteListRequest>,
+) -> impl Responder {
+    let sites = (&site_service).list_sites(query.from, query.length).await?;
 
     ok(sites)
 }

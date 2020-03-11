@@ -15,6 +15,7 @@ pub enum CliError {
     EncoderError(EncoderError),
     DecoderError(DecoderError),
     MongoDbError(MongoDbError),
+    InvalidDataError(String),
     NotFoundError,
 }
 
@@ -25,6 +26,7 @@ impl fmt::Display for CliError {
             CliError::EncoderError(ref err) => write!(f, "{}", err),
             CliError::DecoderError(ref err) => write!(f, "{}", err),
             CliError::MongoDbError(ref err) => write!(f, "{}", err),
+            CliError::InvalidDataError(ref name) => write!(f, "Invalid Data {}", name),
             CliError::NotFoundError => write!(f, "Not Found"),
         }
     }
@@ -43,6 +45,7 @@ impl ResponseError for CliError {
             CliError::EncoderError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             CliError::DecoderError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             CliError::MongoDbError(_) => StatusCode::BAD_GATEWAY,
+            CliError::InvalidDataError(_) => StatusCode::BAD_REQUEST,
             CliError::NotFoundError => StatusCode::NOT_FOUND,
         }
     }

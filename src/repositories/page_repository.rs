@@ -1,4 +1,4 @@
-use crate::models::SiteVersionModel;
+use crate::models::PageModel;
 use crate::utils::{from_doc, to_doc, CliError, Result};
 use async_trait::async_trait;
 use chrono::offset::Utc;
@@ -6,50 +6,49 @@ use mongodb::options::{FindOptions, UpdateModifications};
 use std::result;
 
 #[async_trait]
-pub trait ISiteVersionRepository: Send + Sync {
-    async fn list(&self, site_id: &str) -> Result<Vec<SiteVersionModel>>;
-    async fn get(&self, object_id: &str) -> Result<SiteVersionModel>;
-    async fn add<'a>(&self, model: &'a mut SiteVersionModel) -> Result<&'a mut SiteVersionModel>;
-    async fn update<'a>(&self, model: &'a mut SiteVersionModel)
-        -> Result<&'a mut SiteVersionModel>;
+pub trait IPageRepository: Send + Sync {
+    async fn list(&self, site_version_id: &str) -> Result<Vec<PageModel>>;
+    async fn get(&self, object_id: &str) -> Result<PageModel>;
+    async fn add<'a>(&self, model: &'a mut PageModel) -> Result<&'a mut PageModel>;
+    async fn update<'a>(&self, model: &'a mut PageModel) -> Result<&'a mut PageModel>;
     async fn delete(&self, object_id: &str) -> Result<()>;
 }
 
-pub struct SiteVersionRepository {
+pub struct PageRepository {
     collection: mongodb::Collection,
 }
 
-impl SiteVersionRepository {
+impl PageRepository {
     pub fn new(client: &mongodb::Client) -> Self {
         Self {
-            collection: client.database("space").collection("site_versions"),
+            collection: client.database("space").collection("pages"),
         }
     }
 }
 
 #[async_trait]
-impl ISiteVersionRepository for SiteVersionRepository {
-    async fn list(&self, site_id: &str) -> Result<Vec<SiteVersionModel>> {
+impl IPageRepository for PageRepository {
+    async fn list(&self, site_version_id: &str) -> Result<Vec<PageModel>> {
         let cursor = self.collection.find(
             doc! {
-                "site_id": site_id,
+                "site_version_id": site_version_id,
             },
             FindOptions::builder()
                 .sort(doc! {
-                    "created_at": -1,
+                    "url_path": 1,
                 })
                 .build(),
         )?;
 
-        let site_versions: Vec<SiteVersionModel> = cursor
+        let pages: Vec<PageModel> = cursor
             .filter_map(result::Result::ok)
-            .flat_map(from_doc::<SiteVersionModel>)
+            .flat_map(from_doc::<PageModel>)
             .collect();
 
-        Ok(site_versions)
+        Ok(pages)
     }
 
-    async fn get(&self, object_id: &str) -> Result<SiteVersionModel> {
+    async fn get(&self, object_id: &str) -> Result<PageModel> {
         let result = self.collection.find_one(
             doc! {
                 "_id": object_id,
@@ -59,10 +58,10 @@ impl ISiteVersionRepository for SiteVersionRepository {
 
         let document = result.ok_or(CliError::NotFoundError)?;
 
-        Ok(from_doc::<SiteVersionModel>(document)?)
+        Ok(from_doc::<PageModel>(document)?)
     }
 
-    async fn add<'a>(&self, model: &'a mut SiteVersionModel) -> Result<&'a mut SiteVersionModel> {
+    async fn add<'a>(&self, model: &'a mut PageModel) -> Result<&'a mut PageModel> {
         model.created_at = Some(Utc::now());
         model.updated_at = Some(Utc::now());
 
@@ -76,10 +75,7 @@ impl ISiteVersionRepository for SiteVersionRepository {
         Ok(model)
     }
 
-    async fn update<'a>(
-        &self,
-        model: &'a mut SiteVersionModel,
-    ) -> Result<&'a mut SiteVersionModel> {
+    async fn update<'a>(&self, model: &'a mut PageModel) -> Result<&'a mut PageModel> {
         model.updated_at = Some(Utc::now());
 
         let result = self.collection.update_one(
@@ -100,7 +96,7 @@ impl ISiteVersionRepository for SiteVersionRepository {
     async fn delete(&self, object_id: &str) -> Result<()> {
         let result = self.collection.delete_one(
             doc! {
-                "_id": object_id
+                "_id": object_id,
             },
             None,
         )?;

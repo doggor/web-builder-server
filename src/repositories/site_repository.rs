@@ -1,11 +1,9 @@
 use crate::models::SiteModel;
-use crate::utils::{from_doc, to_doc, CliError};
+use crate::utils::{from_doc, to_doc, CliError, Result};
 use async_trait::async_trait;
 use chrono::offset::Utc;
 use mongodb::options::{FindOptions, UpdateModifications};
 use std::result;
-
-type Result<T> = result::Result<T, CliError>;
 
 #[async_trait]
 pub trait ISiteRepository: Send + Sync {
@@ -21,8 +19,8 @@ pub struct SiteRepository {
 }
 
 impl SiteRepository {
-    pub fn new(client: &mongodb::Client) -> SiteRepository {
-        SiteRepository {
+    pub fn new(client: &mongodb::Client) -> Self {
+        Self {
             collection: client.database("space").collection("sites"),
         }
     }
@@ -35,7 +33,7 @@ impl ISiteRepository for SiteRepository {
             None,
             FindOptions::builder()
                 .sort(doc! {
-                    "created_at": -1
+                    "created_at": -1,
                 })
                 .skip(from as i64)
                 .limit(length as i64)
@@ -64,7 +62,6 @@ impl ISiteRepository for SiteRepository {
     }
 
     async fn add<'a>(&self, model: &'a mut SiteModel) -> Result<&'a mut SiteModel> {
-        //fill time fields
         model.created_at = Some(Utc::now());
         model.updated_at = Some(Utc::now());
 
@@ -79,12 +76,11 @@ impl ISiteRepository for SiteRepository {
     }
 
     async fn update<'a>(&self, model: &'a mut SiteModel) -> Result<&'a mut SiteModel> {
-        //update time fields
         model.updated_at = Some(Utc::now());
 
         let result = self.collection.update_one(
             doc! {
-                "_id": model.id.as_ref().unwrap(),
+                "_id": model.id.as_ref().ok_or(CliError::InvalidDataError("id".to_owned()))?,
             },
             UpdateModifications::Document(to_doc(model)?),
             None,
@@ -100,7 +96,7 @@ impl ISiteRepository for SiteRepository {
     async fn delete(&self, object_id: &str) -> Result<()> {
         let result = self.collection.delete_one(
             doc! {
-                "_id": object_id
+                "_id": object_id,
             },
             None,
         )?;
